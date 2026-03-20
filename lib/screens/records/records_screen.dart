@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/category.dart';
 import '../../models/record.dart';
 import '../../providers/records_provider.dart';
 import '../../widgets/record_list_item.dart';

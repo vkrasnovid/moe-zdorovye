@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../database/database_helper.dart';
 import '../models/record.dart';
-import '../models/category.dart';
 
 class RecordsProvider extends ChangeNotifier {
   final _db = DatabaseHelper();

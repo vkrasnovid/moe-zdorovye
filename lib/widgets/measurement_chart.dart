@@ -104,7 +104,7 @@ class MeasurementChart extends StatelessWidget {
               barWidth: 2.5,
               dotData: FlDotData(
                 show: spots.length <= 15,
-                getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(
+                getDotPainter: (_, _, _, _) => FlDotCirclePainter(
                   radius: 3,
                   color: const Color(0xFF00897B),
                   strokeWidth: 0,
@@ -123,7 +123,7 @@ class MeasurementChart extends StatelessWidget {
                 barWidth: 2.5,
                 dotData: FlDotData(
                   show: spots2.length <= 15,
-                  getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(
+                  getDotPainter: (_, _, _, _) => FlDotCirclePainter(
                     radius: 3,
                     color: const Color(0xFF0288D1),
                     strokeWidth: 0,

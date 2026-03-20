@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'category.dart';
+export 'category.dart';
 
 class MedicalRecord {
   final int? id;

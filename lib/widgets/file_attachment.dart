@@ -92,7 +92,7 @@ class _AttachmentChip extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               child: _isImage
                   ? Image.file(File(path), fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _fileIcon())
+                      errorBuilder: (_, _, _) => _fileIcon())
                   : _fileIcon(),
             ),
           ),

@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
-import '../../models/category.dart';
 import '../../models/record.dart';
 import '../../providers/records_provider.dart';
 import '../../services/file_service.dart';

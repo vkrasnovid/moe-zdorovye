@@ -28,7 +28,7 @@ class AppTheme {
           letterSpacing: 0.2,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: kSurfaceColor,
         elevation: 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
