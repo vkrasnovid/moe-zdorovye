@@ -1,15 +1,21 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/category.dart';
+import '../../providers/profiles_provider.dart';
 import '../../providers/records_provider.dart';
+import '../../providers/measurements_provider.dart';
 import '../../widgets/category_card.dart';
 import '../../widgets/record_list_item.dart';
+import '../../widgets/profile_switcher.dart';
+import '../../widgets/upcoming_reminders_card.dart';
 import '../records/records_screen.dart';
 import '../add_record/add_record_screen.dart';
 import '../record_detail/record_detail_screen.dart';
 import '../measurements/measurements_screen.dart';
 import '../sharing/sharing_screen.dart';
 import '../dynamics/dynamics_screen.dart';
+import '../reminders/reminders_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,21 +25,61 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int? _lastProfileId;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<RecordsProvider>().loadRecords();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final profilesProvider = context.read<ProfilesProvider>();
+      await profilesProvider.loadProfiles();
+      final profileId = profilesProvider.activeProfileId;
+      debugPrint('[HomeScreen] DEBUG: initState profileId=$profileId fired');
+      _lastProfileId = profileId;
+      if (mounted) {
+        context.read<RecordsProvider>().loadRecords(profileId: profileId);
+      }
     });
+  }
+
+  void _onProfileChanged(int? profileId) {
+    debugPrint('[HomeScreen] DEBUG: profile changed profileId=$profileId, reloading data');
+    if (profileId == _lastProfileId) return;
+    _lastProfileId = profileId;
+    context.read<RecordsProvider>().loadRecords(profileId: profileId);
+    context.read<MeasurementsProvider>().reloadAllForProfile(profileId);
   }
 
   @override
   Widget build(BuildContext context) {
+    return Consumer<ProfilesProvider>(
+      builder: (context, profilesProvider, _) {
+        final profileId = profilesProvider.activeProfileId;
+        // Trigger reload when profile changes
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _onProfileChanged(profileId);
+        });
+        return _buildScaffold(context);
+      },
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F9F9),
       appBar: AppBar(
         title: const Text('МоёЗдоровье'),
+        leading: const ProfileSwitcher(),
+        leadingWidth: 80,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            tooltip: 'Напоминания',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const RemindersScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: 'Поиск',
@@ -59,6 +105,12 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildCategoryGrid(context, provider),
+                UpcomingRemindersCard(
+                  onViewAll: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RemindersScreen()),
+                  ),
+                ),
                 _buildRecentSection(context, provider),
                 const SizedBox(height: 80),
               ],

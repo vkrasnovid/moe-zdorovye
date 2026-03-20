@@ -1,8 +1,17 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../models/record.dart';
 import '../../providers/records_provider.dart';
+import '../../providers/profiles_provider.dart';
+import '../../providers/measurements_provider.dart';
+import '../../providers/reminders_provider.dart';
+import '../../services/backup_service.dart';
+import '../../services/settings_service.dart';
 import '../../services/sharing_service.dart';
 import '../../utils/formatters.dart';
 
@@ -13,15 +22,26 @@ class SharingScreen extends StatefulWidget {
   State<SharingScreen> createState() => _SharingScreenState();
 }
 
-class _SharingScreenState extends State<SharingScreen> {
+class _SharingScreenState extends State<SharingScreen> with SingleTickerProviderStateMixin {
   final Set<int> _selectedIds = {};
   bool _serverRunning = false;
   String? _serverUrl;
   SharingService? _service;
+  late TabController _tabController;
+
+  // Backup state
+  bool _backupLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
 
   @override
   void dispose() {
     _service?.stop();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -29,7 +49,7 @@ class _SharingScreenState extends State<SharingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Режим врача'),
+        title: const Text('Настройки'),
         actions: [
           if (_serverRunning)
             TextButton(
@@ -37,11 +57,207 @@ class _SharingScreenState extends State<SharingScreen> {
               child: const Text('Стоп', style: TextStyle(color: Colors.white)),
             ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Режим врача'),
+            Tab(text: 'Резервная копия'),
+          ],
+        ),
       ),
-      body: _serverRunning && _serverUrl != null
-          ? _buildQrView()
-          : _buildSelectionView(context),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _serverRunning && _serverUrl != null ? _buildQrView() : _buildSelectionView(context),
+          _buildBackupTab(),
+        ],
+      ),
     );
+  }
+
+  Widget _buildBackupTab() {
+    final settings = SettingsService.instance;
+    return StatefulBuilder(
+      builder: (context, setLocal) {
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Резервная копия section
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Резервная копия', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    if (_backupLoading)
+                      const Center(child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(),
+                      ))
+                    else ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _exportBackup,
+                          icon: const Icon(Icons.upload_outlined),
+                          label: const Text('Создать резервную копию'),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _importBackup,
+                          icon: const Icon(Icons.download_outlined),
+                          label: const Text('Восстановить из файла'),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Автобекап section
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text('Автобекап'),
+                    subtitle: const Text('Автоматически создавать резервные копии'),
+                    value: settings.autoBackupEnabled,
+                    activeColor: const Color(0xFF00897B),
+                    onChanged: (val) {
+                      settings.autoBackupEnabled = val;
+                      setLocal(() {});
+                    },
+                  ),
+                  if (settings.autoBackupEnabled) ...[
+                    const Divider(height: 1),
+                    ListTile(
+                      title: const Text('Частота'),
+                      trailing: DropdownButton<String>(
+                        value: settings.autoBackupFrequency,
+                        underline: const SizedBox(),
+                        items: const [
+                          DropdownMenuItem(value: 'daily', child: Text('Ежедневно')),
+                          DropdownMenuItem(value: 'weekly', child: Text('Еженедельно')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            settings.autoBackupFrequency = val;
+                            setLocal(() {});
+                          }
+                        },
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      title: const Text('Последний бекап'),
+                      subtitle: Text(
+                        settings.lastAutoBackupAt != null
+                            ? AppFormatters.formatDate(settings.lastAutoBackupAt!)
+                            : 'Ещё не создавался',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      trailing: const Icon(Icons.history, color: Colors.grey),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _exportBackup() async {
+    debugPrint('[SharingScreen] DEBUG: export backup button tapped');
+    setState(() => _backupLoading = true);
+    try {
+      final file = await BackupService.instance.exportBackup();
+      debugPrint('[SharingScreen] INFO: export complete path=${file.path} size=${await file.length()}');
+      if (mounted) {
+        await Share.shareXFiles([XFile(file.path)], subject: 'МоёЗдоровье резервная копия');
+      }
+    } catch (e) {
+      debugPrint('[SharingScreen] ERROR: export failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка создания резервной копии: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _backupLoading = false);
+    }
+  }
+
+  Future<void> _importBackup() async {
+    debugPrint('[SharingScreen] DEBUG: import backup button tapped');
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Восстановление'),
+        content: const Text('Восстановление заменит все текущие данные. Продолжить?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Восстановить'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['zip'],
+    );
+    if (result == null || result.files.first.path == null) return;
+
+    setState(() => _backupLoading = true);
+    try {
+      await BackupService.instance.importBackup(File(result.files.first.path!));
+      // Reload all providers
+      if (mounted) {
+        final profilesProvider = context.read<ProfilesProvider>();
+        await profilesProvider.loadProfiles();
+        final profileId = profilesProvider.activeProfileId;
+        await context.read<RecordsProvider>().loadRecords(profileId: profileId);
+        await context.read<MeasurementsProvider>().reloadAllForProfile(profileId);
+        if (profileId != null) {
+          await context.read<RemindersProvider>().loadReminders(profileId);
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Данные успешно восстановлены'), backgroundColor: Colors.green),
+        );
+        debugPrint('[SharingScreen] INFO: import complete, providers reloaded');
+      }
+    } catch (e) {
+      debugPrint('[SharingScreen] ERROR: import failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка восстановления: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _backupLoading = false);
+    }
   }
 
   Widget _buildSelectionView(BuildContext context) {

@@ -76,6 +76,7 @@ class Measurement {
   final double? value2;
   final DateTime dateTime;
   final String? notes;
+  final int? profileId;
 
   Measurement({
     this.id,
@@ -84,6 +85,7 @@ class Measurement {
     this.value2,
     required this.dateTime,
     this.notes,
+    this.profileId,
   });
 
   String get displayValue {
@@ -104,6 +106,7 @@ class Measurement {
       'value2': value2,
       'date_time': dateTime.millisecondsSinceEpoch,
       'notes': notes,
+      'profile_id': profileId,
     };
   }
 
@@ -115,6 +118,7 @@ class Measurement {
       value2: map['value2'] != null ? (map['value2'] as num).toDouble() : null,
       dateTime: DateTime.fromMillisecondsSinceEpoch(map['date_time'] as int),
       notes: map['notes'] as String?,
+      profileId: map['profile_id'] as int?,
     );
   }
 
@@ -125,6 +129,7 @@ class Measurement {
     double? value2,
     DateTime? dateTime,
     String? notes,
+    int? profileId,
   }) {
     return Measurement(
       id: id ?? this.id,
@@ -133,6 +138,7 @@ class Measurement {
       value2: value2 ?? this.value2,
       dateTime: dateTime ?? this.dateTime,
       notes: notes ?? this.notes,
+      profileId: profileId ?? this.profileId,
     );
   }
 }

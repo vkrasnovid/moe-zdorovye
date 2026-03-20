@@ -10,6 +10,7 @@ class RecordsProvider extends ChangeNotifier {
   bool _loading = false;
   String _searchQuery = '';
   RecordCategory? _filterCategory;
+  int? _profileId;
 
   List<MedicalRecord> get records => _filteredRecords;
   Map<String, int> get categoryCounts => _categoryCounts;
@@ -37,12 +38,15 @@ class RecordsProvider extends ChangeNotifier {
   int countForCategory(RecordCategory cat) =>
       _categoryCounts[cat.name] ?? 0;
 
-  Future<void> loadRecords() async {
+  Future<void> loadRecords({int? profileId}) async {
+    _profileId = profileId ?? _profileId;
+    debugPrint('[RecordsProvider] DEBUG: loadRecords entry profileId=$_profileId');
     _loading = true;
     notifyListeners();
     try {
-      _records = await _db.getAllRecords();
-      _categoryCounts = await _db.getCategoryCounts();
+      _records = await _db.getAllRecords(profileId: _profileId);
+      _categoryCounts = await _db.getCategoryCounts(profileId: _profileId);
+      debugPrint('[RecordsProvider] DEBUG: loadRecords exit count=${_records.length} categories=${_categoryCounts.length}');
     } catch (_) {
       // leave existing data intact
     } finally {
@@ -52,9 +56,11 @@ class RecordsProvider extends ChangeNotifier {
   }
 
   Future<void> addRecord(MedicalRecord record) async {
+    final withProfile = record.copyWith(profileId: _profileId);
+    debugPrint('[RecordsProvider] DEBUG: addRecord profileId=$_profileId category=${record.category.name}');
     try {
-      final id = await _db.insertRecord(record);
-      final saved = record.copyWith(id: id);
+      final id = await _db.insertRecord(withProfile);
+      final saved = withProfile.copyWith(id: id);
       _records.insert(0, saved);
       _categoryCounts[record.category.name] =
           (_categoryCounts[record.category.name] ?? 0) + 1;
@@ -66,10 +72,12 @@ class RecordsProvider extends ChangeNotifier {
   }
 
   Future<void> updateRecord(MedicalRecord record) async {
+    final withProfile = record.copyWith(profileId: _profileId);
+    debugPrint('[RecordsProvider] DEBUG: updateRecord id=${record.id} profileId=$_profileId');
     try {
-      await _db.updateRecord(record);
+      await _db.updateRecord(withProfile);
       final idx = _records.indexWhere((r) => r.id == record.id);
-      if (idx != -1) _records[idx] = record;
+      if (idx != -1) _records[idx] = withProfile;
       notifyListeners();
     } catch (_) {
       notifyListeners();

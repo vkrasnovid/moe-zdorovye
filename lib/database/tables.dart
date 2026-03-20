@@ -2,6 +2,8 @@ class Tables {
   static const String records = 'records';
   static const String measurements = 'measurements';
   static const String parsedResults = 'parsed_results';
+  static const String profiles = 'profiles';
+  static const String reminders = 'reminders';
 
   static const String createRecords = '''
     CREATE TABLE $records (
@@ -40,6 +42,33 @@ class Tables {
       flag TEXT NOT NULL,
       test_date TEXT NOT NULL,
       parsed_at INTEGER NOT NULL
+    )
+  ''';
+
+  static const String createProfiles = '''
+    CREATE TABLE $profiles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      avatar_color INTEGER NOT NULL DEFAULT 4280391411,
+      is_default INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    )
+  ''';
+
+  static const String createReminders = '''
+    CREATE TABLE $reminders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      profile_id INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT,
+      schedule_type TEXT NOT NULL,
+      time_minutes INTEGER NOT NULL,
+      weekdays_mask INTEGER NOT NULL DEFAULT 0,
+      next_due_date INTEGER,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      linked_record_id INTEGER,
+      created_at INTEGER NOT NULL
     )
   ''';
 }

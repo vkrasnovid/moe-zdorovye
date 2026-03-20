@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'providers/profiles_provider.dart';
 import 'providers/records_provider.dart';
 import 'providers/measurements_provider.dart';
 import 'providers/parsed_results_provider.dart';
+import 'providers/reminders_provider.dart';
 import 'screens/home/home_screen.dart';
 import 'theme/app_theme.dart';
 import 'utils/constants.dart';
@@ -15,9 +17,11 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ProfilesProvider()),
         ChangeNotifierProvider(create: (_) => RecordsProvider()),
         ChangeNotifierProvider(create: (_) => MeasurementsProvider()),
         ChangeNotifierProvider(create: (_) => ParsedResultsProvider()),
+        ChangeNotifierProvider(create: (_) => RemindersProvider()),
       ],
       child: MaterialApp(
         title: AppConstants.appName,

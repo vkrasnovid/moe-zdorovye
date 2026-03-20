@@ -11,6 +11,7 @@ class MedicalRecord {
   final List<String> attachments;
   final Map<String, dynamic> extraData;
   final DateTime createdAt;
+  final int? profileId;
 
   MedicalRecord({
     this.id,
@@ -21,6 +22,7 @@ class MedicalRecord {
     List<String>? attachments,
     Map<String, dynamic>? extraData,
     DateTime? createdAt,
+    this.profileId,
   })  : attachments = attachments ?? [],
         extraData = extraData ?? {},
         createdAt = createdAt ?? DateTime.now();
@@ -34,6 +36,7 @@ class MedicalRecord {
     List<String>? attachments,
     Map<String, dynamic>? extraData,
     DateTime? createdAt,
+    int? profileId,
   }) {
     return MedicalRecord(
       id: id ?? this.id,
@@ -44,6 +47,7 @@ class MedicalRecord {
       attachments: attachments ?? this.attachments,
       extraData: extraData ?? this.extraData,
       createdAt: createdAt ?? this.createdAt,
+      profileId: profileId ?? this.profileId,
     );
   }
 
@@ -57,6 +61,7 @@ class MedicalRecord {
       'attachments': jsonEncode(attachments),
       'extra_data': jsonEncode(extraData),
       'created_at': createdAt.millisecondsSinceEpoch,
+      'profile_id': profileId,
     };
   }
 
@@ -70,6 +75,7 @@ class MedicalRecord {
       attachments: List<String>.from(jsonDecode(map['attachments'] as String? ?? '[]')),
       extraData: Map<String, dynamic>.from(jsonDecode(map['extra_data'] as String? ?? '{}')),
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
+      profileId: map['profile_id'] as int?,
     );
   }
 }
