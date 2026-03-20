@@ -6,25 +6,44 @@ import '../../utils/formatters.dart';
 import '../../widgets/file_attachment.dart';
 import '../add_record/add_record_screen.dart';
 
-class RecordDetailScreen extends StatelessWidget {
+class RecordDetailScreen extends StatefulWidget {
   final MedicalRecord record;
 
   const RecordDetailScreen({super.key, required this.record});
 
   @override
+  State<RecordDetailScreen> createState() => _RecordDetailScreenState();
+}
+
+class _RecordDetailScreenState extends State<RecordDetailScreen> {
+  late MedicalRecord _record;
+
+  @override
+  void initState() {
+    super.initState();
+    _record = widget.record;
+  }
+
+  Future<void> _navigateToEdit() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => AddRecordScreen(editRecord: _record)),
+    );
+    if (!mounted) return;
+    final provider = context.read<RecordsProvider>();
+    final idx = provider.records.indexWhere((r) => r.id == _record.id);
+    if (idx != -1) setState(() => _record = provider.records[idx]);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(record.category.displayName),
+        title: Text(_record.category.displayName),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => AddRecordScreen(editRecord: record),
-              ),
-            ),
+            onPressed: _navigateToEdit,
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
@@ -38,15 +57,15 @@ class RecordDetailScreen extends StatelessWidget {
           _buildHeader(),
           const SizedBox(height: 16),
           _buildInfoCard(),
-          if (record.notes != null && record.notes!.isNotEmpty) ...[
+          if (_record.notes != null && _record.notes!.isNotEmpty) ...[
             const SizedBox(height: 12),
             _buildNotesCard(),
           ],
-          if (record.attachments.isNotEmpty) ...[
+          if (_record.attachments.isNotEmpty) ...[
             const SizedBox(height: 12),
             _buildAttachmentsCard(),
           ],
-          if (record.extraData.isNotEmpty) ...[
+          if (_record.extraData.isNotEmpty) ...[
             const SizedBox(height: 12),
             _buildExtraDataCard(),
           ],
@@ -56,7 +75,7 @@ class RecordDetailScreen extends StatelessWidget {
   }
 
   Widget _buildHeader() {
-    final color = record.category.color;
+    final color = _record.category.color;
     return Row(
       children: [
         Container(
@@ -66,7 +85,7 @@ class RecordDetailScreen extends StatelessWidget {
             color: color.withAlpha(25),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: Icon(record.category.icon, color: color, size: 28),
+          child: Icon(_record.category.icon, color: color, size: 28),
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -74,12 +93,12 @@ class RecordDetailScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                record.title,
+                _record.title,
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
               Text(
-                record.category.displayNameFull,
+                _record.category.displayNameFull,
                 style: TextStyle(fontSize: 13, color: color),
               ),
             ],
@@ -96,8 +115,8 @@ class RecordDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow(Icons.calendar_today_outlined, 'Дата', AppFormatters.formatDate(record.date)),
-            _buildInfoRow(Icons.access_time_outlined, 'Добавлено', AppFormatters.formatDate(record.createdAt)),
+            _buildInfoRow(Icons.calendar_today_outlined, 'Дата', AppFormatters.formatDate(_record.date)),
+            _buildInfoRow(Icons.access_time_outlined, 'Добавлено', AppFormatters.formatDate(_record.createdAt)),
           ],
         ),
       ),
@@ -133,7 +152,7 @@ class RecordDetailScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(record.notes!, style: const TextStyle(fontSize: 14, height: 1.5)),
+            Text(_record.notes!, style: const TextStyle(fontSize: 14, height: 1.5)),
           ],
         ),
       ),
@@ -152,13 +171,13 @@ class RecordDetailScreen extends StatelessWidget {
                 Icon(Icons.attach_file, size: 16, color: Colors.grey[600]),
                 const SizedBox(width: 6),
                 Text(
-                  'Вложения (${record.attachments.length})',
+                  'Вложения (${_record.attachments.length})',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            FileAttachmentList(paths: record.attachments),
+            FileAttachmentList(paths: _record.attachments),
           ],
         ),
       ),
@@ -166,14 +185,14 @@ class RecordDetailScreen extends StatelessWidget {
   }
 
   Widget _buildExtraDataCard() {
-    final labels = _extraLabels(record.category);
+    final labels = _extraLabels(_record.category);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ...record.extraData.entries.map((e) {
+            ..._record.extraData.entries.map((e) {
               final label = labels[e.key] ?? e.key;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -202,7 +221,7 @@ class RecordDetailScreen extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Удалить запись?'),
-        content: Text('«${record.title}» будет удалена безвозвратно.'),
+        content: Text('«${_record.title}» будет удалена безвозвратно.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -211,7 +230,7 @@ class RecordDetailScreen extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              context.read<RecordsProvider>().deleteRecord(record);
+              context.read<RecordsProvider>().deleteRecord(_record);
               Navigator.pop(context);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),

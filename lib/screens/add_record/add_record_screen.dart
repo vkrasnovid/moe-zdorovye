@@ -271,31 +271,37 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
 
-    final extraData = <String, dynamic>{};
-    for (final field in _extraFieldsForCategory(_selectedCategory)) {
-      final key = field['key']!;
-      final value = _extraControllers[key]?.text.trim() ?? '';
-      if (value.isNotEmpty) extraData[key] = value;
+    try {
+      final extraData = <String, dynamic>{};
+      for (final field in _extraFieldsForCategory(_selectedCategory)) {
+        final key = field['key']!;
+        final value = _extraControllers[key]?.text.trim() ?? '';
+        if (value.isNotEmpty) extraData[key] = value;
+      }
+
+      final record = MedicalRecord(
+        id: widget.editRecord?.id,
+        category: _selectedCategory,
+        title: _titleController.text.trim(),
+        date: _selectedDate,
+        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        attachments: _attachments,
+        extraData: extraData,
+      );
+
+      final provider = context.read<RecordsProvider>();
+      if (widget.editRecord != null) {
+        await provider.updateRecord(record);
+      } else {
+        await provider.addRecord(record);
+      }
+
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      // provider already notified listeners; just re-enable the button
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
-
-    final record = MedicalRecord(
-      id: widget.editRecord?.id,
-      category: _selectedCategory,
-      title: _titleController.text.trim(),
-      date: _selectedDate,
-      notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
-      attachments: _attachments,
-      extraData: extraData,
-    );
-
-    final provider = context.read<RecordsProvider>();
-    if (widget.editRecord != null) {
-      await provider.updateRecord(record);
-    } else {
-      await provider.addRecord(record);
-    }
-
-    if (mounted) Navigator.pop(context);
   }
 
   List<Map<String, String>> _extraFieldsForCategory(RecordCategory cat) {

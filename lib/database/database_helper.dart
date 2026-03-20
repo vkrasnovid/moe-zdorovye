@@ -25,6 +25,9 @@ class DatabaseHelper {
         await db.execute(Tables.createRecords);
         await db.execute(Tables.createMeasurements);
       },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        // Apply incremental migrations here when version is incremented.
+      },
     );
   }
 

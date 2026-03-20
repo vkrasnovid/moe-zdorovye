@@ -16,29 +16,50 @@ class MeasurementsProvider extends ChangeNotifier {
   Future<void> loadForType(MeasurementType type) async {
     _loading = true;
     notifyListeners();
-    _byType[type] = await _db.getMeasurementsByType(type.name);
-    _loading = false;
-    notifyListeners();
+    try {
+      _byType[type] = await _db.getMeasurementsByType(type.name);
+    } catch (_) {
+      // leave existing data intact
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> addMeasurement(Measurement m) async {
-    final id = await _db.insertMeasurement(m);
-    final saved = m.copyWith(id: id);
-    _byType[m.type] = [saved, ...(_byType[m.type] ?? [])];
-    notifyListeners();
+    try {
+      final id = await _db.insertMeasurement(m);
+      final saved = m.copyWith(id: id);
+      _byType[m.type] = [saved, ...(_byType[m.type] ?? [])];
+      notifyListeners();
+    } catch (_) {
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> updateMeasurement(Measurement m) async {
-    await _db.updateMeasurement(m);
-    final list = _byType[m.type] ?? [];
-    final idx = list.indexWhere((x) => x.id == m.id);
-    if (idx != -1) list[idx] = m;
-    notifyListeners();
+    try {
+      await _db.updateMeasurement(m);
+      final list = _byType[m.type] ?? [];
+      final idx = list.indexWhere((x) => x.id == m.id);
+      if (idx != -1) list[idx] = m;
+      notifyListeners();
+    } catch (_) {
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> deleteMeasurement(Measurement m) async {
-    await _db.deleteMeasurement(m.id!);
-    _byType[m.type]?.removeWhere((x) => x.id == m.id);
-    notifyListeners();
+    if (m.id == null) return;
+    try {
+      await _db.deleteMeasurement(m.id!);
+      _byType[m.type]?.removeWhere((x) => x.id == m.id);
+      notifyListeners();
+    } catch (_) {
+      notifyListeners();
+      rethrow;
+    }
   }
 }

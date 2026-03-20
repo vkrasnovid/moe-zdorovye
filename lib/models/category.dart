@@ -85,6 +85,9 @@ extension RecordCategoryExtension on RecordCategory {
   }
 
   static RecordCategory fromName(String name) {
-    return RecordCategory.values.firstWhere((e) => e.name == name);
+    return RecordCategory.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => RecordCategory.values.first,
+    );
   }
 }

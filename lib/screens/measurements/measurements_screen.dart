@@ -242,7 +242,11 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
                       controller: _valueController,
                       decoration: InputDecoration(labelText: type.valueName),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Введите значение' : null,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Введите значение';
+                        if (double.tryParse(v.trim().replaceAll(',', '.')) == null) return 'Введите число';
+                        return null;
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -251,7 +255,11 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
                       controller: _value2Controller,
                       decoration: InputDecoration(labelText: type.value2Name),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Введите значение' : null,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Введите значение';
+                        if (double.tryParse(v.trim().replaceAll(',', '.')) == null) return 'Введите число';
+                        return null;
+                      },
                     ),
                   ),
                 ],
@@ -263,7 +271,11 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
                   labelText: '${type.displayName} (${type.unit})',
                 ),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                validator: (v) => v == null || v.trim().isEmpty ? 'Введите значение' : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Введите значение';
+                  if (double.tryParse(v.trim().replaceAll(',', '.')) == null) return 'Введите число';
+                  return null;
+                },
               ),
             const SizedBox(height: 12),
             InkWell(

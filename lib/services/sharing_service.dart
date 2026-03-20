@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
@@ -12,22 +13,40 @@ import '../utils/constants.dart';
 class SharingService {
   final List<MedicalRecord> records;
   HttpServer? _server;
+  String? _token;
 
   SharingService({required this.records});
 
   Future<String> start() async {
     final ip = await NetworkInfo().getWifiIP() ?? '127.0.0.1';
-    final router = Router();
+    _token = _generateToken();
+    final token = _token!;
 
-    router.get('/', (Request req) => _handleIndex(req));
+    final router = Router();
+    router.get('/', (Request req) => _handleIndex(req, token));
     router.get('/files/<filename>', (Request req, String filename) => _handleFile(req, filename));
 
     final handler = Pipeline()
-        .addMiddleware(logRequests())
+        .addMiddleware(_tokenMiddleware(token))
         .addHandler(router.call);
 
-    _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, AppConstants.localServerPort);
-    return 'http://$ip:${AppConstants.localServerPort}';
+    _server = await shelf_io.serve(handler, InternetAddress(ip), AppConstants.localServerPort);
+    return 'http://$ip:${AppConstants.localServerPort}/?token=$token';
+  }
+
+  String _generateToken() {
+    final rand = Random.secure();
+    final bytes = List<int>.generate(16, (_) => rand.nextInt(256));
+    return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
+
+  Middleware _tokenMiddleware(String token) {
+    return (Handler inner) => (Request req) {
+      if (req.url.queryParameters['token'] != token) {
+        return Response.forbidden('Доступ запрещён');
+      }
+      return inner(req);
+    };
   }
 
   void stop() {
@@ -35,8 +54,8 @@ class SharingService {
     _server = null;
   }
 
-  Response _handleIndex(Request req) {
-    final html = _buildHtml();
+  Response _handleIndex(Request req, String token) {
+    final html = _buildHtml(token);
     return Response.ok(html, headers: {'content-type': 'text/html; charset=utf-8'});
   }
 
@@ -56,7 +75,7 @@ class SharingService {
     return Response.notFound('Файл не найден');
   }
 
-  String _buildHtml() {
+  String _buildHtml(String token) {
     final recordsHtml = records.map((r) {
       final extraRows = r.extraData.entries.map((e) {
         return '<tr><td class="label">${_extraLabel(r.category, e.key)}</td><td>${_escape(e.value.toString())}</td></tr>';
@@ -68,9 +87,9 @@ class SharingService {
                 final name = p.basename(path);
                 final isImg = ['.jpg', '.jpeg', '.png', '.webp'].any((e) => path.toLowerCase().endsWith(e));
                 if (isImg) {
-                  return '<a href="/files/$name" target="_blank"><img src="/files/$name" alt="$name"></a>';
+                  return '<a href="/files/$name?token=$token" target="_blank"><img src="/files/$name?token=$token" alt="$name"></a>';
                 }
-                return '<a href="/files/$name" target="_blank" class="file-link">📎 $name</a>';
+                return '<a href="/files/$name?token=$token" target="_blank" class="file-link">📎 $name</a>';
               }).join('')}
             </div>'''
           : '';

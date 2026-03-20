@@ -40,34 +40,55 @@ class RecordsProvider extends ChangeNotifier {
   Future<void> loadRecords() async {
     _loading = true;
     notifyListeners();
-    _records = await _db.getAllRecords();
-    _categoryCounts = await _db.getCategoryCounts();
-    _loading = false;
-    notifyListeners();
+    try {
+      _records = await _db.getAllRecords();
+      _categoryCounts = await _db.getCategoryCounts();
+    } catch (_) {
+      // leave existing data intact
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> addRecord(MedicalRecord record) async {
-    final id = await _db.insertRecord(record);
-    final saved = record.copyWith(id: id);
-    _records.insert(0, saved);
-    _categoryCounts[record.category.name] =
-        (_categoryCounts[record.category.name] ?? 0) + 1;
-    notifyListeners();
+    try {
+      final id = await _db.insertRecord(record);
+      final saved = record.copyWith(id: id);
+      _records.insert(0, saved);
+      _categoryCounts[record.category.name] =
+          (_categoryCounts[record.category.name] ?? 0) + 1;
+      notifyListeners();
+    } catch (_) {
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> updateRecord(MedicalRecord record) async {
-    await _db.updateRecord(record);
-    final idx = _records.indexWhere((r) => r.id == record.id);
-    if (idx != -1) _records[idx] = record;
-    notifyListeners();
+    try {
+      await _db.updateRecord(record);
+      final idx = _records.indexWhere((r) => r.id == record.id);
+      if (idx != -1) _records[idx] = record;
+      notifyListeners();
+    } catch (_) {
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> deleteRecord(MedicalRecord record) async {
-    await _db.deleteRecord(record.id!);
-    _records.removeWhere((r) => r.id == record.id);
-    final count = _categoryCounts[record.category.name] ?? 1;
-    _categoryCounts[record.category.name] = (count - 1).clamp(0, 999);
-    notifyListeners();
+    if (record.id == null) return;
+    try {
+      await _db.deleteRecord(record.id!);
+      _records.removeWhere((r) => r.id == record.id);
+      final count = _categoryCounts[record.category.name] ?? 1;
+      _categoryCounts[record.category.name] = (count - 1).clamp(0, 999);
+      notifyListeners();
+    } catch (_) {
+      notifyListeners();
+      rethrow;
+    }
   }
 
   void setSearchQuery(String query) {

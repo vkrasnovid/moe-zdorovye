@@ -62,7 +62,10 @@ extension MeasurementTypeExtension on MeasurementType {
   String get value2Name => 'Диастолическое';
 
   static MeasurementType fromName(String name) {
-    return MeasurementType.values.firstWhere((e) => e.name == name);
+    return MeasurementType.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => MeasurementType.values.first,
+    );
   }
 }
 
