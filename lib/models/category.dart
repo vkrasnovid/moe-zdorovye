@@ -31,7 +31,7 @@ extension RecordCategoryExtension on RecordCategory {
       case RecordCategory.imaging:
         return 'Снимки';
       case RecordCategory.prescriptions:
-        return 'Назначения';
+        return 'Рецепты';
       case RecordCategory.vaccinations:
         return 'Вакцинации';
       case RecordCategory.conditions:
@@ -72,15 +72,30 @@ extension RecordCategoryExtension on RecordCategory {
   Color get color {
     switch (this) {
       case RecordCategory.tests:
-        return const Color(0xFF00897B);
+        return const Color(0xFF1565C0);
       case RecordCategory.imaging:
-        return const Color(0xFF0288D1);
+        return const Color(0xFF6A1B9A);
       case RecordCategory.prescriptions:
-        return const Color(0xFF7B1FA2);
-      case RecordCategory.vaccinations:
         return const Color(0xFF2E7D32);
-      case RecordCategory.conditions:
+      case RecordCategory.vaccinations:
         return const Color(0xFFE65100);
+      case RecordCategory.conditions:
+        return const Color(0xFFC62828);
+    }
+  }
+
+  List<Color> get gradientColors {
+    switch (this) {
+      case RecordCategory.tests:
+        return [const Color(0xFF1565C0), const Color(0xFF42A5F5)];
+      case RecordCategory.imaging:
+        return [const Color(0xFF6A1B9A), const Color(0xFFAB47BC)];
+      case RecordCategory.prescriptions:
+        return [const Color(0xFF2E7D32), const Color(0xFF66BB6A)];
+      case RecordCategory.vaccinations:
+        return [const Color(0xFFE65100), const Color(0xFFFF9800)];
+      case RecordCategory.conditions:
+        return [const Color(0xFFC62828), const Color(0xFFEF5350)];
     }
   }
 

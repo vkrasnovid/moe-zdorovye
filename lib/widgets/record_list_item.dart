@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/record.dart';
 import '../utils/formatters.dart';
+import '../services/file_service.dart';
 
 class RecordListItem extends StatelessWidget {
   final MedicalRecord record;
@@ -52,18 +54,22 @@ class RecordListItem extends StatelessWidget {
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        Icon(Icons.calendar_today_outlined, size: 12, color: Colors.grey[500]),
+                        Icon(Icons.calendar_today_outlined,
+                            size: 12, color: Colors.grey[500]),
                         const SizedBox(width: 4),
                         Text(
                           AppFormatters.formatDate(record.date),
-                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[500]),
                         ),
                         if (record.attachments.isNotEmpty) ...[
                           const SizedBox(width: 8),
-                          Icon(Icons.attach_file, size: 12, color: Colors.grey[500]),
+                          Icon(Icons.attach_file,
+                              size: 12, color: Colors.grey[500]),
                           Text(
                             '${record.attachments.length}',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[500]),
                           ),
                         ],
                       ],
@@ -71,12 +77,19 @@ class RecordListItem extends StatelessWidget {
                   ],
                 ),
               ),
+              if (record.attachments.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                _buildThumbnail(record.attachments.first),
+              ],
+              const SizedBox(width: 4),
               if (onDelete != null)
                 IconButton(
-                  icon: Icon(Icons.delete_outline, color: Colors.grey[400], size: 20),
+                  icon: Icon(Icons.delete_outline,
+                      color: Colors.grey[400], size: 20),
                   onPressed: onDelete,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
                 )
               else
                 Icon(Icons.chevron_right, color: Colors.grey[400]),
@@ -85,5 +98,48 @@ class RecordListItem extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildThumbnail(String path) {
+    if (FileService.isImage(path)) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: Image.file(
+          File(path),
+          width: 40,
+          height: 40,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(Icons.image, size: 20, color: Colors.grey[400]),
+          ),
+        ),
+      );
+    } else if (FileService.isPdf(path)) {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.red[50],
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(Icons.picture_as_pdf, color: Colors.red[400], size: 20),
+      );
+    } else {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(Icons.insert_drive_file, color: Colors.grey[500], size: 20),
+      );
+    }
   }
 }

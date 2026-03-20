@@ -4,6 +4,7 @@ import '../../models/record.dart';
 import '../../providers/records_provider.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/file_attachment.dart';
+import '../../services/file_service.dart';
 import '../add_record/add_record_screen.dart';
 
 class RecordDetailScreen extends StatefulWidget {
@@ -22,6 +23,34 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
   void initState() {
     super.initState();
     _record = widget.record;
+  }
+
+  Future<void> _deleteAttachment(String path) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Удалить вложение?'),
+        content: const Text('Файл будет удален из записи.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final newAttachments = List<String>.from(_record.attachments)..remove(path);
+    final updated = _record.copyWith(attachments: newAttachments);
+    await context.read<RecordsProvider>().updateRecord(updated);
+    if (!mounted) return;
+    setState(() => _record = updated);
+    await FileService.deleteAttachment(path);
   }
 
   Future<void> _navigateToEdit() async {
@@ -177,7 +206,10 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            FileAttachmentList(paths: _record.attachments),
+            FileAttachmentList(
+              paths: _record.attachments,
+              onRemove: _deleteAttachment,
+            ),
           ],
         ),
       ),
