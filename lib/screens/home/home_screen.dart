@@ -9,6 +9,7 @@ import '../add_record/add_record_screen.dart';
 import '../record_detail/record_detail_screen.dart';
 import '../measurements/measurements_screen.dart';
 import '../sharing/sharing_screen.dart';
+import '../dynamics/dynamics_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -107,6 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   )),
               _buildMetricsCard(context),
+              _buildDynamicsCard(context),
             ],
           ),
         ],
@@ -158,6 +160,67 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
                   'Показатели здоровья',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDynamicsCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const DynamicsScreen()),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1A237E), Color(0xFF3949AB)],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1A237E).withAlpha(80),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(50),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.show_chart,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  'Динамика анализов',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,

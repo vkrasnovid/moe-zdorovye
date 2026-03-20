@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/record.dart';
+import '../../models/parsed_result.dart';
 import '../../providers/records_provider.dart';
+import '../../providers/parsed_results_provider.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/file_attachment.dart';
 import '../../services/file_service.dart';
@@ -23,6 +25,11 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
   void initState() {
     super.initState();
     _record = widget.record;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_record.id != null) {
+        context.read<ParsedResultsProvider>().loadForRecord(_record.id!);
+      }
+    });
   }
 
   Future<void> _deleteAttachment(String path) async {
@@ -64,12 +71,51 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
     if (idx != -1) setState(() => _record = provider.records[idx]);
   }
 
+  Future<void> _parseDocument() async {
+    if (_record.id == null || _record.attachments.isEmpty) return;
+    final provider = context.read<ParsedResultsProvider>();
+    final found = await provider.parseRecord(_record);
+    if (!mounted) return;
+    if (!found) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Показатели не найдены. Попробуйте другой документ.')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Найдено ${provider.recordResults.length} показателей'),
+          backgroundColor: Colors.green[700],
+        ),
+      );
+    }
+  }
+
+  bool get _canParse =>
+      _record.category == RecordCategory.tests && _record.attachments.isNotEmpty && _record.id != null;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(_record.category.displayName),
         actions: [
+          if (_canParse)
+            Consumer<ParsedResultsProvider>(
+              builder: (context, provider, _) => provider.loading
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.biotech_outlined),
+                      tooltip: 'Разобрать анализы',
+                      onPressed: _parseDocument,
+                    ),
+            ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             onPressed: _navigateToEdit,
@@ -97,6 +143,10 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
           if (_record.extraData.isNotEmpty) ...[
             const SizedBox(height: 12),
             _buildExtraDataCard(),
+          ],
+          if (_record.category == RecordCategory.tests) ...[
+            const SizedBox(height: 12),
+            _buildParsedResultsCard(),
           ],
         ],
       ),
@@ -244,6 +294,110 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
             }),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildParsedResultsCard() {
+    return Consumer<ParsedResultsProvider>(
+      builder: (context, provider, _) {
+        final results = provider.recordResults;
+
+        if (provider.loading) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+
+        if (results.isEmpty) {
+          if (!_canParse) return const SizedBox.shrink();
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.biotech_outlined, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Показатели',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Icon(Icons.science_outlined, size: 40, color: Colors.grey[300]),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Нажмите  для автоматического\nраспознавания анализов из документов',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.biotech_outlined, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Показатели (${results.length})',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...results.map((r) => _buildResultRow(r)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildResultRow(ParsedResult r) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(r.flagIcon, size: 14, color: r.flagColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              r.testName,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+          Text(
+            '${r.value} ${r.unit}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: r.flagColor,
+            ),
+          ),
+          if (r.refMin != null && r.refMax != null) ...[
+            const SizedBox(width: 6),
+            Text(
+              '(${r.refMin}–${r.refMax})',
+              style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+            ),
+          ],
+        ],
       ),
     );
   }

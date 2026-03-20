@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/record.dart';
 import '../models/measurement.dart';
+import '../models/parsed_result.dart';
 import 'tables.dart';
 
 class DatabaseHelper {
@@ -20,13 +21,16 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'moe_zdorovye.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute(Tables.createRecords);
         await db.execute(Tables.createMeasurements);
+        await db.execute(Tables.createParsedResults);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        // Apply incremental migrations here when version is incremented.
+        if (oldVersion < 2) {
+          await db.execute(Tables.createParsedResults);
+        }
       },
     );
   }
@@ -124,5 +128,67 @@ class DatabaseHelper {
     final db = await database;
     final result = await db.rawQuery('SELECT COUNT(*) as count FROM ${Tables.measurements}');
     return result.first['count'] as int;
+  }
+
+  // ParsedResults
+  Future<int> insertParsedResult(ParsedResult result) async {
+    final db = await database;
+    return db.insert(Tables.parsedResults, result.toMap());
+  }
+
+  Future<List<ParsedResult>> getParsedResultsForRecord(int recordId) async {
+    final db = await database;
+    final maps = await db.query(
+      Tables.parsedResults,
+      where: 'record_id = ?',
+      whereArgs: [recordId],
+      orderBy: 'test_name_normalized ASC',
+    );
+    return maps.map(ParsedResult.fromMap).toList();
+  }
+
+  Future<List<ParsedResult>> getAllParsedResults() async {
+    final db = await database;
+    final maps = await db.query(Tables.parsedResults, orderBy: 'test_date ASC');
+    return maps.map(ParsedResult.fromMap).toList();
+  }
+
+  Future<int> updateParsedResult(ParsedResult r) async {
+    final db = await database;
+    return db.update(
+      Tables.parsedResults,
+      r.toMap(),
+      where: 'id = ?',
+      whereArgs: [r.id],
+    );
+  }
+
+  Future<int> deleteParsedResult(int id) async {
+    final db = await database;
+    return db.delete(Tables.parsedResults, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteParsedResultsForRecord(int recordId) async {
+    final db = await database;
+    await db.delete(Tables.parsedResults, where: 'record_id = ?', whereArgs: [recordId]);
+  }
+
+  Future<List<ParsedResult>> getParsedResultsByNormalized(String normalized) async {
+    final db = await database;
+    final maps = await db.query(
+      Tables.parsedResults,
+      where: 'test_name_normalized = ?',
+      whereArgs: [normalized],
+      orderBy: 'test_date ASC',
+    );
+    return maps.map(ParsedResult.fromMap).toList();
+  }
+
+  Future<List<String>> getDistinctNormalizedTestNames() async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT DISTINCT test_name_normalized FROM ${Tables.parsedResults} ORDER BY test_name_normalized ASC',
+    );
+    return result.map((r) => r['test_name_normalized'] as String).toList();
   }
 }
